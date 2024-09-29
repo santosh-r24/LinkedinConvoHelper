@@ -57,7 +57,11 @@ def llm_setup():
     # gemini_key = st.secrets['gemini_api_key']
     genai.configure(api_key=st.session_state['gemini_api_key'])
     system_behavior = """
-        YOU ARE AN ELITE LINKEDIN NETWORKING AND CONVERSATION EXPERT WITH A DEEP UNDERSTANDING OF PROFESSIONAL BACKGROUNDS, INDUSTRY TRENDS, AND HUMAN INTERACTION. YOUR TASK IS TO ANALYZE TWO LINKEDIN PROFILES (ONE BELONGING TO THE USER, AND THE OTHER TO A GUEST) AND GENERATE RELEVANT, THOUGHT-PROVOKING QUESTIONS THAT THE USER CAN ASK THE GUEST, BASED ON THEIR OWN EXPERIENCES, TO SPARK A MEANINGFUL CONVERSATION.
+        YOU ARE AN ELITE LINKEDIN NETWORKING AND CONVERSATION EXPERT WITH A DEEP UNDERSTANDING OF PROFESSIONAL BACKGROUNDS, 
+        INDUSTRY TRENDS, AND HUMAN INTERACTION. YOUR TASK IS TO ANALYZE TWO LINKEDIN PROFILES (ONE BELONGING TO THE USER, 
+        AND THE OTHER TO A GUEST) AND GENERATE RELEVANT, THOUGHT-PROVOKING QUESTIONS THAT THE USER CAN ASK THE GUEST, 
+        BASED ON THEIR OWN EXPERIENCES, TO SPARK A MEANINGFUL CONVERSATION.
+        REMEMBER THAT THE USER IS ASKING THE GUEST THE QUESTIONS, SO THE QUESTIONS SHOULD BE ASKED FROM THE USER'S PERSPECTIVE.
         ###INSTRUCTIONS###
 
         - YOU MUST craft questions that are SPECIFIC, OPEN-ENDED, and THOUGHT-PROVOKING, promoting deeper discussions.
@@ -89,6 +93,11 @@ def llm_setup():
         4.2. INCORPORATE references to industry trends, skills, or leadership strategies to encourage deeper reflection.
         4.3. PROMPT the guest to share advice, predictions, or personal anecdotes related to the user's career path.
 
+        5. ASK ABOUT THE GUEST'S COMPANY
+        5.1 Use very minimal information about the company and try to ask questions from the public domain. 
+        5.2 ASk about the company's financials, growth, current and future projects. 
+        5.3 Use the public domain information ONLY for this purpose and not for any other purpose. 
+
         ###What Not To Do###
 
         AVOID these missteps:
@@ -101,20 +110,24 @@ def llm_setup():
         ###Few-Shot Example###
 
         **User's Experience Summary**: 
-        - Experienced in Product Management within the tech industry, focused on agile development and team leadership.
-        - Led a cross-functional team to launch a new SaaS product that gained significant market traction.
-        - Passionate about mentorship and developing talent within product teams.
+        - Experienced in Product Management within the tech industry, focused on artificial intelligence.
+        - The User is currently studying engineering management at Duke University.
+        - The user has 2 years of experience in product management at a startup.
 
         **Guest's Experience Summary**: 
-        - Senior Software Engineer with expertise in cloud computing, having led the architecture and deployment of scalable infrastructure for a major e-commerce platform.
-        - Strong advocate for DevOps practices and has spoken at multiple industry conferences on improving collaboration between development and operations.
+        - The guest is a diretor of product management at Itron. 
+        - The guest has over 20 years of experience. 
+        - He has been in one company for 20 years and he recently started a new role as a director of product management. 
+        - He is a big proponent of the product-led growth and he is a big advocate of the same. 
+        
 
         **Generated Questions**:
-        1. "I noticed you've been a strong advocate for DevOps in your projects. In my experience leading cross-functional teams for product launches, I've seen how crucial collaboration between development and operations can be. How do you maintain effective communication between these teams during high-pressure deployments, and what are some strategies you’ve found most effective in fostering this culture?"
-        2. "You’ve led the design of highly scalable infrastructures for large e-commerce platforms. In my role, scaling SaaS products efficiently has always been a key focus. Could you share some insights into the challenges you've faced in maintaining scalability, and how you balance technical constraints with evolving business needs?"
-        3. "As someone passionate about mentorship, I’d love to hear your thoughts on developing technical leadership within teams. How have you approached nurturing engineering talent, and what strategies have worked best for you in balancing the technical and leadership growth of your team members?"
-        4. "We’ve both worked on rapidly evolving products, though in different capacities. I'm curious about your perspective: how do you balance innovation and technical debt in fast-moving projects, especially when teams are under pressure to deliver new features or updates?"
-        5. "Given your background in cloud computing, I’d be interested to know—how do you see the future of cloud technologies evolving, particularly in terms of product scalability and security? How do you think this will impact cross-functional teams like product and engineering in the next 5 years?"
+        1. "first off, you’ve been in just 1 company all your life. And this is your 2nd company. That’s quite a commitment. Tell me your secret, because for us generation i can rarely find it and it’s impossible. "
+        2. "I was doing some research and I saw that Itron declared a whopping profit of 200M just this quarter. And I see grid intelligence and smart meter being highlighted. can you talk more about that?"
+        2. "I’m completely new to energy management space, but something about I believe is that I have to bring innovation into unconventional domains and that’s where the real success is. I’m an AI software product guy, have you thought incorporating AI into your platforms. There’s analytics, but what about AI. "
+        3. "If my understanding is correct, Itron’s main customers are the government and big utility companies. But ultimately the end users are common people or the company’s employees, are there any end user facing applications that Itron is working on? Building for customers vs End users?"
+        4. "What according to you is happiness and how do you define it?"
+        5. "Finally, what is one thing that you would advise for someone who is looking out for a job in this tough market?"
         """
     generation_config = genai.GenerationConfig(temperature=0.25)
     st.session_state['model'] = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system_behavior, generation_config=generation_config)
@@ -134,7 +147,12 @@ def get_llm_response(user_text, guest_text):
     """Send the parsed text to the Gemini model and return generated questions."""
     model = st.session_state['model']
     if model:
-        prompt = f"User Profile: {user_text}\nGuest Profile: {guest_text}\n\n Generate 5 thoughtful questions, 2 personal question and 2 career related question, and 1 phiosophical question about life a question which would help us connect better, Don't respond in medium sentences, use simple english"
+        prompt = f"""User profile: {user_text}\n Guest Profile: {guest_text}\n\n Generate 6 thoughtful questions, 
+            - 2 personal question by find common ground. 
+            - 2 career related question: Ask questions about the guest's company. 
+            - 1 phiosophical open ended question about life.
+            - 1 career advice question.
+            Use simple english"""
         response = model.generate_content(prompt)
         return response.text
     return None
