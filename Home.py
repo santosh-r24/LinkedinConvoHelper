@@ -31,7 +31,10 @@ flow = Flow.from_client_config(
 def google_oauth():
     authorization_url, state = flow.authorization_url(prompt='consent')
     st.session_state['state'] = state
-    st.write(f"[Login with Google]({authorization_url})")
+    
+    with st.container():
+        st.markdown(f'<a href="{authorization_url}" target="_self" class="button primary" style="background-color: #4285F4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 10px;">Login with Google</a>', unsafe_allow_html=True)
+
 
 def process_auth_callback():
     if 'code' in st.query_params.keys():
@@ -143,23 +146,50 @@ def parse_pdf(file):
             text += page.get_text()
     return text
 
-def get_llm_response(user_text, guest_text):
+def get_llm_response(prompt=None):
     """Send the parsed text to the Gemini model and return generated questions."""
     model = st.session_state['model']
-    if model:
+    user_text = st.session_state['user_text']
+    guest_text = st.session_state['guest_text']
+    if model and prompt:
+        system_prompt = f"""Use the above prompt, in addition always use the context of User profile: {user_text} and Guest profile: {guest_text} while generating the response.
+        If the user asks about something that is not related to the guest's profile, kindly ask them to ask something relevant.
+        """
+        final_prompt = f"{prompt}\n\n{system_prompt}"
+    elif model:
         prompt = f"""User profile: {user_text}\n Guest Profile: {guest_text}\n\n Generate 6 thoughtful questions, 
             - 2 personal question by find common ground. 
             - 2 career related question: Ask questions about the guest's company. 
             - 1 phiosophical open ended question about life.
             - 1 career advice question.
-            Use simple english"""
-        response = model.generate_content(prompt)
-        return response.text
-    return None
+            Use simple english.
+            If the user asks about something that is not related to the guest's profile, kindly ask them to ask something relevant.
+            """
+    response = model.generate_content(prompt)
+    return response.text
+
+def initialise_side_bar_components():
+    """
+    Contains components that are present in the side bar, apart from pages.
+    """
+    with st.sidebar:
+        user_pdf = st.file_uploader("Upload your LinkedIn profile PDF here", type=".pdf")
+
+        guest_pdf = st.file_uploader("Upload guest's LinkedIn profile PDF here", type=".pdf")
+
+        if st.button("Submit", type="primary"):
+            if user_pdf and guest_pdf:
+                user_text = parse_pdf(user_pdf)
+                st.session_state['user_text'] = user_text
+                guest_text = parse_pdf(guest_pdf)
+                st.session_state['guest_text'] = guest_text
+            else:
+                st.error("Error: Please upload both your LinkedIn profile PDF and the guest's LinkedIn profile PDF.")
 
 if __name__ =="__main__":
-    # st.set_page_config(page_title='LinkedinAssistant', page_icon='', initial_sidebar_state='expanded', layout='wide')
-    # st.write("HElloo")
+
+    st.set_page_config(page_title='Linkedin Convo Helper', page_icon=':speech_balloon:', initial_sidebar_state='expanded', layout='wide')
+    # TO CHECK IF THE USER HAS LOGGED IN
     login_status_container = st.container()
     
     if 'user_info' not in st.session_state:
@@ -167,6 +197,10 @@ if __name__ =="__main__":
         st.session_state['user_info'] = None
         st.session_state['variables_initialised'] = False
         st.session_state['model'] = None
+        st.session_state['user_text'] = None
+        st.session_state['guest_text'] = None
+        st.session_state['messages'] = []
+        st.session_state['display_messages'] = []
 
     if st.session_state['user_info']:
         if not st.session_state['variables_initialised']:
@@ -175,22 +209,48 @@ if __name__ =="__main__":
         
         with login_status_container:
             st.success(f"Welcome {st.session_state['user_info']['email']}. Setup is ready!")
-        st.toast("Setup Ready! You can now use the tool :)")
-        logger.info(f"Welcome {st.session_state['user_info']['email']} ")
 
-        user_pdf = st.file_uploader("Upload user pdf here", type=".pdf")
-        guest_pdf = st.file_uploader("Upload guest pdf here", type=".pdf")
+        initialise_side_bar_components ()
 
-        if st.button("Submit", type="primary"):
-            if user_pdf and guest_pdf:
-                user_text = parse_pdf(user_pdf)
-                guest_text = parse_pdf(guest_pdf)
-                response = get_llm_response(user_text, guest_text)
-                if response:
-                    st.write("Generated Questions:")
-                    st.write(response)
-                else:
-                    st.write("No response from the LLM.")
+        
+
+        # CHAT COMES HERE.
+        a = st.container()
+        with a:
+            for message in st.session_state['display_messages']:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["parts"][0])
+        if st.session_state['user_text'] and st.session_state['guest_text']:
+            response = get_llm_response()
+            if response:
+                with a:
+                    st.chat_message("model").markdown(response)
+            else:
+                st.chat_message("model").markdown("No response from the LLM.")
+
+            if prompt:= st.chat_input("Type your message here"):
+                # message_count = utils.cached_get_message_count(st.session_state['user_info']['email'], datetime.timedelta(minutes=st.session_state['timeframe']))
+                # logger.debug(f"User {st.session_state['user_info']['name']} reached {message_count} messages")
+                # if message_count <= st.session_state['rate_limit']:
+                with a:
+                    st.chat_message("user").markdown(prompt)
+                # st.session_state['messages'].append({"role":"user", "parts": [prompt]})
+                # st.session_state['display_messages'].append({"role":"user", "parts": [prompt]})
+                # db_funcs.save_chat_message(cursor, db, st.session_state['user_info']['email'], "user", prompt) 
+                with a:
+                    with st.spinner("Generating response... please wait"):
+                        # response = llm_utils.generate_response(messages=st.session_state['messages'], model=st.session_state['chat_model'], db=db, cursor=cursor)
+                        response = get_llm_response(prompt)
+                    with st.chat_message("model"):
+                        st.markdown(response)
+                # Add assistant response to chat history
+                st.session_state['messages'].append({"role":"model", "parts": [response]})
+                st.session_state['display_messages'].append({"role":"model", "parts": [response]})
+            # db_funcs.save_chat_message(cursor, db, st.session_state['user_info']['email'], "model", response.text)
+            # else: 
+                # st.toast("Rate limit of 10 exceeded. Please try again later.")
+
+        
     else:
         user_info = process_auth_callback()
         if user_info:
@@ -202,8 +262,4 @@ if __name__ =="__main__":
                 st.warning(body="You're not logged in, please login to use the assistant")
                 google_oauth()
 
-    st.markdown("""
-    ---
-    **Need help? Contact support at [santoshramakrishnan24@gmail.com](mailto:santoshramakrishnan24@gmail.com) \
-    Reach out to me on [Twitter](https://x.com/SantoshKutti24)**
-    """)
+    
