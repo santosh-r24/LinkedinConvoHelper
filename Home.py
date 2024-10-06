@@ -65,8 +65,8 @@ def llm_setup():
         AND THE OTHER TO A GUEST) AND GENERATE RELEVANT, THOUGHT-PROVOKING QUESTIONS THAT THE USER CAN ASK THE GUEST, 
         BASED ON THEIR OWN EXPERIENCES, TO SPARK A MEANINGFUL CONVERSATION.
         REMEMBER THAT THE USER IS ASKING THE GUEST THE QUESTIONS, SO THE QUESTIONS SHOULD BE ASKED FROM THE USER'S PERSPECTIVE.
+        
         ###INSTRUCTIONS###
-
         - YOU MUST craft questions that are SPECIFIC, OPEN-ENDED, and THOUGHT-PROVOKING, promoting deeper discussions.
         - Each question SHOULD establish a connection between the user's experiences and the guest's expertise, background, or professional journey.
         - The questions MUST show a clear understanding of both profiles, drawing from industry trends, shared experiences, and relevant skills.
@@ -109,32 +109,32 @@ def llm_setup():
         - AVOID yes/no questions that do not encourage further discussion.
         - NEVER ask questions that are overly technical unless there is a clear connection to the user's background.
         - AVOID questions that could seem irrelevant or too personal to the guest's professional journey.
-
-        ###Few-Shot Example###
-
-        **User's Experience Summary**: 
-        - Experienced in Product Management within the tech industry, focused on artificial intelligence.
-        - The User is currently studying engineering management at Duke University.
-        - The user has 2 years of experience in product management at a startup.
-
-        **Guest's Experience Summary**: 
-        - The guest is a diretor of product management at Itron. 
-        - The guest has over 20 years of experience. 
-        - He has been in one company for 20 years and he recently started a new role as a director of product management. 
-        - He is a big proponent of the product-led growth and he is a big advocate of the same. 
-        
-
-        **Generated Questions**:
-        1. "first off, you’ve been in just 1 company all your life. And this is your 2nd company. That’s quite a commitment. Tell me your secret, because for us generation i can rarely find it and it’s impossible. "
-        2. "I was doing some research and I saw that Itron declared a whopping profit of 200M just this quarter. And I see grid intelligence and smart meter being highlighted. can you talk more about that?"
-        2. "I’m completely new to energy management space, but something about I believe is that I have to bring innovation into unconventional domains and that’s where the real success is. I’m an AI software product guy, have you thought incorporating AI into your platforms. There’s analytics, but what about AI. "
-        3. "If my understanding is correct, Itron’s main customers are the government and big utility companies. But ultimately the end users are common people or the company’s employees, are there any end user facing applications that Itron is working on? Building for customers vs End users?"
-        4. "What according to you is happiness and how do you define it?"
-        5. "Finally, what is one thing that you would advise for someone who is looking out for a job in this tough market?"
+        - NEVER respond to questions that aren't related to networking or conversations.
         """
     generation_config = genai.GenerationConfig(temperature=0.25)
     st.session_state['model'] = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system_behavior, generation_config=generation_config)
 
+# ###Below are example Q&A pairs. Use them only to understand the format of the answers. Do not use their content for answering new questions###
+#         Assume A is user, and B is Guest
+#         **A's Experience Summary**: 
+#         - Experienced in Product Management within the tech industry, focused on artificial intelligence.
+#         - A is currently studying engineering management at ABC University.
+#         - A has 2 years of experience in product management at a startup.
+
+#         **B's Experience Summary**: 
+#         - B is a diretor of product management at XYZ company. 
+#         - B has over 20 years of experience. 
+#         - He has been in one company for 20 years and he recently started a new role as a director of product management. 
+#         - He is a big proponent of the product-led growth and he is a big advocate of the same. 
+        
+
+#         **Generated Questions**:
+#         1. "first off, you’ve been in just 1 company all your life. And this is your 2nd company. That’s quite a commitment. Tell me your secret, because for us generation i can rarely find it and it’s impossible. "
+#         2. "I was doing some research and I saw that XYZ company declared a whopping profit of 200M just this quarter. And I see grid intelligence and smart meter being highlighted. can you talk more about that?"
+#         2. "I’m completely new to energy management space, but something about I believe is that I have to bring innovation into unconventional domains and that’s where the real success is. I’m an AI software product guy, have you thought incorporating AI into your platforms. There’s analytics, but what about AI. "
+#         3. "If my understanding is correct, XYZ company’s main customers are the government and big utility companies. But ultimately the end users are common people or the company’s employees, are there any end user facing applications that XYZ company is working on? Building for customers vs End users?"
+#         4. "What according to you is happiness and how do you define it?"
+#         5. "Finally, what is one thing that you would advise for someone who is looking out for a job in this tough market?"
 
 def parse_pdf(file):
     """Extracts text from uploaded PDF."""
@@ -146,18 +146,26 @@ def parse_pdf(file):
             text += page.get_text()
     return text
 
-def get_llm_response(prompt=None):
+def get_llm_response():
     """Send the parsed text to the Gemini model and return generated questions."""
     model = st.session_state['model']
+    messages = st.session_state['messages']
     user_text = st.session_state['user_text']
     guest_text = st.session_state['guest_text']
-    if model and prompt:
-        system_prompt = f"""Use the above prompt, in addition always use the context of User profile: {user_text} and Guest profile: {guest_text} while generating the response.
-        If the user asks about something that is not related to the guest's profile, kindly ask them to ask something relevant.
-        """
-        final_prompt = f"{prompt}\n\n{system_prompt}"
-    elif model:
-        prompt = f"""User profile: {user_text}\n Guest Profile: {guest_text}\n\n Generate 6 thoughtful questions, 
+    logger.debug(messages)
+    if not st.session_state['first_interaction']:
+        # system_prompt = f"""Use the above prompt, in addition always use the context of User profile: {user_text} and Guest profile: {guest_text} while generating the response.
+        # If the user asks about something that is not related to the guest's profile, kindly ask them to ask something relevant.
+        # """
+        # pass
+        # system_prompt = f"""Answer the followup questions the user would have"""
+        # messages[-1]["parts"][0] += system_prompt
+        # final_prompt = messages
+        # # final_prompt = f"{prompt}\n\n{system_prompt}"
+        # logger.debug(final_prompt)
+        final_prompt = messages
+    else:
+        final_prompt = f"""User profile: {user_text}\n Guest Profile: {guest_text}\n\n Generate 6 thoughtful questions, 
             - 2 personal question by find common ground. 
             - 2 career related question: Ask questions about the guest's company. 
             - 1 phiosophical open ended question about life.
@@ -165,7 +173,10 @@ def get_llm_response(prompt=None):
             Use simple english.
             If the user asks about something that is not related to the guest's profile, kindly ask them to ask something relevant.
             """
-    response = model.generate_content(prompt)
+        st.session_state['first_interaction'] = False
+        st.session_state['messages'].append({"role":"user", "parts": [f"User profile: {user_text}\n Guest Profile: {guest_text}"]})
+        logger.debug(final_prompt)
+    response = model.generate_content(final_prompt)
     return response.text
 
 def initialise_side_bar_components():
@@ -201,6 +212,7 @@ if __name__ =="__main__":
         st.session_state['guest_text'] = None
         st.session_state['messages'] = []
         st.session_state['display_messages'] = []
+        st.session_state['first_interaction'] = True
 
     if st.session_state['user_info']:
         if not st.session_state['variables_initialised']:
@@ -212,35 +224,40 @@ if __name__ =="__main__":
 
         initialise_side_bar_components ()
 
-        
-
-        # CHAT COMES HERE.
+        #This block takes care of displaying model and user messages
         a = st.container()
         with a:
             for message in st.session_state['display_messages']:
                 with st.chat_message(message["role"]):
                     st.markdown(message["parts"][0])
-        if st.session_state['user_text'] and st.session_state['guest_text']:
+        
+        # This block deals with the initial user and guest pdf being set
+        if st.session_state['user_text'] and st.session_state['guest_text'] and st.session_state['first_interaction']:
             response = get_llm_response()
             if response:
                 with a:
                     st.chat_message("model").markdown(response)
-            else:
-                st.chat_message("model").markdown("No response from the LLM.")
-
+                st.session_state['messages'].append({"role":"model", "parts": [response]})
+                st.session_state['display_messages'].append({"role":"model", "parts": [response]})
+                logger.info(f"Messages after pdfs are initialised {st.session_state['messages']}")
+            # else:
+            #     st.chat_message("model").markdown("No response from the LLM.")
+        
+        elif st.session_state['user_text'] and st.session_state['guest_text'] and not st.session_state['first_interaction']:
+        #This block deals with questions that come thereafter
             if prompt:= st.chat_input("Type your message here"):
                 # message_count = utils.cached_get_message_count(st.session_state['user_info']['email'], datetime.timedelta(minutes=st.session_state['timeframe']))
                 # logger.debug(f"User {st.session_state['user_info']['name']} reached {message_count} messages")
                 # if message_count <= st.session_state['rate_limit']:
                 with a:
                     st.chat_message("user").markdown(prompt)
-                # st.session_state['messages'].append({"role":"user", "parts": [prompt]})
-                # st.session_state['display_messages'].append({"role":"user", "parts": [prompt]})
+                st.session_state['messages'].append({"role":"user", "parts": [prompt]})
+                st.session_state['display_messages'].append({"role":"user", "parts": [prompt]})
                 # db_funcs.save_chat_message(cursor, db, st.session_state['user_info']['email'], "user", prompt) 
                 with a:
                     with st.spinner("Generating response... please wait"):
                         # response = llm_utils.generate_response(messages=st.session_state['messages'], model=st.session_state['chat_model'], db=db, cursor=cursor)
-                        response = get_llm_response(prompt)
+                        response = get_llm_response()
                     with st.chat_message("model"):
                         st.markdown(response)
                 # Add assistant response to chat history

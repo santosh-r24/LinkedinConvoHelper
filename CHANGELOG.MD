@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+
+## [1.0.2] - 2024-10-06
+ 
+Updates pushed in this commit.
+ 
+### Added
+### Changed
+### Fixed
+### Removed
+- Removed few shot examples from system behavior
+### TO ADD
+- Add 1st interaction variable, if true then it'll follow structure for questions. If not it'll respond basis the user's query. How do you deal with it when we save user profiles ?
+- Consider adding streamlit's chat interface vs inbuilt gemini interface
 ## [1.0.1] - 2024-10-02
  
 - Added the user and guest pdf to session state.
