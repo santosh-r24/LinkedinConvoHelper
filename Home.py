@@ -6,9 +6,10 @@ from logzero import logger
 import google.auth.transport.requests
 import google.oauth2.id_token
 from google_auth_oauthlib.flow import Flow
+import datetime
 
 import utils
-
+import database_functions as db_funcs
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 os.environ['GOOGLE_CLIENT_ID'] = st.secrets['google_oauth']['client_id']
 
@@ -154,15 +155,6 @@ def get_llm_response():
     guest_text = st.session_state['guest_text']
     logger.debug(messages)
     if not st.session_state['first_interaction']:
-        # system_prompt = f"""Use the above prompt, in addition always use the context of User profile: {user_text} and Guest profile: {guest_text} while generating the response.
-        # If the user asks about something that is not related to the guest's profile, kindly ask them to ask something relevant.
-        # """
-        # pass
-        # system_prompt = f"""Answer the followup questions the user would have"""
-        # messages[-1]["parts"][0] += system_prompt
-        # final_prompt = messages
-        # # final_prompt = f"{prompt}\n\n{system_prompt}"
-        # logger.debug(final_prompt)
         final_prompt = messages
     else:
         final_prompt = f"""User profile: {user_text}\n Guest Profile: {guest_text}\n\n Generate 6 thoughtful questions, 
@@ -202,7 +194,8 @@ if __name__ =="__main__":
     st.set_page_config(page_title='Linkedin Convo Helper', page_icon=':speech_balloon:', initial_sidebar_state='expanded', layout='wide')
     # TO CHECK IF THE USER HAS LOGGED IN
     login_status_container = st.container()
-    
+    db, cursor = db_funcs.initialize_database()
+
     if 'user_info' not in st.session_state:
         st.session_state['credentials'] = None
         st.session_state['user_info'] = None
@@ -218,7 +211,7 @@ if __name__ =="__main__":
         if not st.session_state['variables_initialised']:
             utils.initialize_variables()
             llm_setup()
-        
+        message_count = utils.cached_get_message_count(st.session_state['user_info']['email'], datetime.timedelta(minutes=st.session_state['timeframe']))
         with login_status_container:
             st.success(f"Welcome {st.session_state['user_info']['email']}. Setup is ready!")
 
@@ -246,37 +239,36 @@ if __name__ =="__main__":
         elif st.session_state['user_text'] and st.session_state['guest_text'] and not st.session_state['first_interaction']:
         #This block deals with questions that come thereafter
             if prompt:= st.chat_input("Type your message here"):
-                # message_count = utils.cached_get_message_count(st.session_state['user_info']['email'], datetime.timedelta(minutes=st.session_state['timeframe']))
+                message_count = utils.cached_get_message_count(st.session_state['user_info']['email'], datetime.timedelta(minutes=st.session_state['timeframe']))
                 # logger.debug(f"User {st.session_state['user_info']['name']} reached {message_count} messages")
-                # if message_count <= st.session_state['rate_limit']:
-                with a:
-                    st.chat_message("user").markdown(prompt)
-                st.session_state['messages'].append({"role":"user", "parts": [prompt]})
-                st.session_state['display_messages'].append({"role":"user", "parts": [prompt]})
-                # db_funcs.save_chat_message(cursor, db, st.session_state['user_info']['email'], "user", prompt) 
-                with a:
-                    with st.spinner("Generating response... please wait"):
-                        # response = llm_utils.generate_response(messages=st.session_state['messages'], model=st.session_state['chat_model'], db=db, cursor=cursor)
-                        response = get_llm_response()
-                    with st.chat_message("model"):
-                        st.markdown(response)
-                # Add assistant response to chat history
-                st.session_state['messages'].append({"role":"model", "parts": [response]})
-                st.session_state['display_messages'].append({"role":"model", "parts": [response]})
-            # db_funcs.save_chat_message(cursor, db, st.session_state['user_info']['email'], "model", response.text)
+                if message_count <= st.session_state['rate_limit']:
+                    with a:
+                        st.chat_message("user").markdown(prompt)
+                    st.session_state['messages'].append({"role":"user", "parts": [prompt]})
+                    st.session_state['display_messages'].append({"role":"user", "parts": [prompt]})
+                    db_funcs.save_chat_message(cursor, db, st.session_state['user_info']['email'], "user", prompt) 
+                    with a:
+                        with st.spinner("Generating response... please wait"):
+                            # response = llm_utils.generate_response(messages=st.session_state['messages'], model=st.session_state['chat_model'], db=db, cursor=cursor)
+                            response = get_llm_response()
+                        with st.chat_message("model"):
+                            st.markdown(response)
+                    # Add assistant response to chat history
+                    st.session_state['messages'].append({"role":"model", "parts": [response]})
+                    st.session_state['display_messages'].append({"role":"model", "parts": [response]})
+                    db_funcs.save_chat_message(cursor, db, st.session_state['user_info']['email'], "model", response)
             # else: 
-                # st.toast("Rate limit of 10 exceeded. Please try again later.")
-
         
+                # st.toast("Rate limit of 10 exceeded. Please try again later.")
+        logger.debug(f"User {st.session_state['user_info']['email']} reached {message_count} messages")
     else:
         user_info = process_auth_callback()
         if user_info:
             st.session_state['user_info'] = user_info
-            # st.info(f"You've logged in as {user_info['email']}")
             st.rerun()
         else:
             with login_status_container:
                 st.warning(body="You're not logged in, please login to use the assistant")
                 google_oauth()
-
+    
     

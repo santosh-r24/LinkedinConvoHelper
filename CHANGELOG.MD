@@ -15,8 +15,10 @@ Updates pushed in this commit.
 ### Removed
 - Removed few shot examples from system behavior
 ### TO ADD
-- Add 1st interaction variable, if true then it'll follow structure for questions. If not it'll respond basis the user's query. How do you deal with it when we save user profiles ?
-- Consider adding streamlit's chat interface vs inbuilt gemini interface
+- Check message count while hitting response, rather than calling function every x seconds
+- Display an appropriate message when message rate runs out 
+- Retrieval user pdf and preload
+- Check that the user pdf and messages are saved 
 ## [1.0.1] - 2024-10-02
  
 - Added the user and guest pdf to session state.
