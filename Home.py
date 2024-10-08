@@ -177,15 +177,16 @@ def initialise_side_bar_components():
     """
     with st.sidebar:
         user_pdf = st.file_uploader("Upload your LinkedIn profile PDF here", type=".pdf")
-
         guest_pdf = st.file_uploader("Upload guest's LinkedIn profile PDF here", type=".pdf")
 
         if st.button("Submit", type="primary"):
             if user_pdf and guest_pdf:
                 user_text = parse_pdf(user_pdf)
-                st.session_state['user_text'] = user_text
                 guest_text = parse_pdf(guest_pdf)
+                st.session_state['user_text'] = user_text
                 st.session_state['guest_text'] = guest_text
+                st.session_state['pdfs_submitted'] = True
+                st.rerun()
             else:
                 st.error("Error: Please upload both your LinkedIn profile PDF and the guest's LinkedIn profile PDF.")
 
@@ -211,55 +212,62 @@ if __name__ =="__main__":
         if not st.session_state['variables_initialised']:
             utils.initialize_variables()
             llm_setup()
+
         message_count = utils.cached_get_message_count(st.session_state['user_info']['email'], datetime.timedelta(minutes=st.session_state['timeframe']))
         with login_status_container:
             st.success(f"Welcome {st.session_state['user_info']['email']}. Setup is ready!")
 
-        initialise_side_bar_components ()
+        if message_count >= st.session_state['rate_limit']:
+            st.error("You've reached today's quota of 10 messages. Please come back after 24 hours.")
+        else:
+            initialise_side_bar_components()
 
-        #This block takes care of displaying model and user messages
-        a = st.container()
-        with a:
+        # Chat display container
+        chat_container = st.container()
+
+        # This block deals with the initial user and guest pdf being set
+        if st.session_state.get('pdfs_submitted', False):
+            st.session_state['pdfs_submitted'] = False  # Reset the flag
+            if st.session_state['user_text'] and st.session_state['guest_text']:
+                response = get_llm_response()
+                if response:
+                    with chat_container:
+                        st.chat_message("model").markdown(response)
+                    st.session_state['messages'].append({"role":"model", "parts": [response]})
+                    st.session_state['display_messages'].append({"role":"model", "parts": [response]})
+                    st.session_state['first_interaction'] = False
+                    logger.info(f"Messages after pdfs are initialised {st.session_state['messages']}")
+
+        # Display existing messages
+        with chat_container:
             for message in st.session_state['display_messages']:
                 with st.chat_message(message["role"]):
                     st.markdown(message["parts"][0])
-        
-        # This block deals with the initial user and guest pdf being set
-        if st.session_state['user_text'] and st.session_state['guest_text'] and st.session_state['first_interaction']:
-            response = get_llm_response()
-            if response:
-                with a:
-                    st.chat_message("model").markdown(response)
-                st.session_state['messages'].append({"role":"model", "parts": [response]})
-                st.session_state['display_messages'].append({"role":"model", "parts": [response]})
-                logger.info(f"Messages after pdfs are initialised {st.session_state['messages']}")
-            # else:
-            #     st.chat_message("model").markdown("No response from the LLM.")
-        
-        elif st.session_state['user_text'] and st.session_state['guest_text'] and not st.session_state['first_interaction']:
-        #This block deals with questions that come thereafter
-            if prompt:= st.chat_input("Type your message here"):
+
+        # Handle new user input
+        if st.session_state['user_text'] and st.session_state['guest_text'] and not st.session_state['first_interaction']:
+            if prompt := st.chat_input("Type your message here"):
                 message_count = utils.cached_get_message_count(st.session_state['user_info']['email'], datetime.timedelta(minutes=st.session_state['timeframe']))
-                # logger.debug(f"User {st.session_state['user_info']['name']} reached {message_count} messages")
-                if message_count <= st.session_state['rate_limit']:
-                    with a:
+                if message_count < st.session_state['rate_limit']:
+                    with chat_container:
                         st.chat_message("user").markdown(prompt)
                     st.session_state['messages'].append({"role":"user", "parts": [prompt]})
                     st.session_state['display_messages'].append({"role":"user", "parts": [prompt]})
                     db_funcs.save_chat_message(cursor, db, st.session_state['user_info']['email'], "user", prompt) 
-                    with a:
+                    db_funcs.save_user(cursor, db, st.session_state['user_info']['email'], st.session_state['user_info']['name'], st.session_state['user_text']) 
+
+                    
+                    with chat_container:
                         with st.spinner("Generating response... please wait"):
-                            # response = llm_utils.generate_response(messages=st.session_state['messages'], model=st.session_state['chat_model'], db=db, cursor=cursor)
                             response = get_llm_response()
                         with st.chat_message("model"):
                             st.markdown(response)
-                    # Add assistant response to chat history
                     st.session_state['messages'].append({"role":"model", "parts": [response]})
                     st.session_state['display_messages'].append({"role":"model", "parts": [response]})
                     db_funcs.save_chat_message(cursor, db, st.session_state['user_info']['email'], "model", response)
-            # else: 
-        
-                # st.toast("Rate limit of 10 exceeded. Please try again later.")
+                else:
+                    st.error("You've reached today's quota of 10 messages. Please come back after 24 hours.")
+
         logger.debug(f"User {st.session_state['user_info']['email']} reached {message_count} messages")
     else:
         user_info = process_auth_callback()

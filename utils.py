@@ -21,7 +21,7 @@ def _initialize_api_key():
         st.session_state['gemini_api_key'] = random.choice(list(st.secrets['api_keys'].values()))
         logger.debug(f"This session uses the key {st.session_state['gemini_api_key']}")
 
-@st.cache_data(ttl=100)  # Cache for 90 seconds
+# @st.cache_data(ttl=100)  # Cache for 90 seconds
 def cached_get_message_count(email, timeframe):
     """Cache function to fetch message count"""
     db, cursor = db_funcs.initialize_database()
