@@ -7,6 +7,8 @@ import google.auth.transport.requests
 import google.oauth2.id_token
 from google_auth_oauthlib.flow import Flow
 import datetime
+import psycopg2
+import streamlit.components.v1 as components
 
 import utils
 import database_functions as db_funcs
@@ -186,13 +188,28 @@ def initialise_side_bar_components():
                 st.session_state['user_text'] = user_text
                 st.session_state['guest_text'] = guest_text
                 st.session_state['pdfs_submitted'] = True
+                db_funcs.save_user_if_not_exists(cursor, db, st.session_state['user_info']['email'], st.session_state.get('user_text', ''))
                 st.rerun()
             else:
                 st.error("Error: Please upload both your LinkedIn profile PDF and the guest's LinkedIn profile PDF.")
 
-if __name__ =="__main__":
+def add_refresh_warning():
+    refresh_warning_js = '''
+    <script>
+    window.addEventListener('beforeunload', function (e) {
+        e.preventDefault();
+        e.returnValue = 'Hey, the session will get logged off if you refresh. Are you sure you want to continue?';
+    });
+    </script>
+    '''
+    components.html(refresh_warning_js, height=0)
 
+if __name__ == "__main__":
     st.set_page_config(page_title='Linkedin Convo Helper', page_icon=':speech_balloon:', initial_sidebar_state='expanded', layout='wide')
+    
+    # Add the refresh warning
+    add_refresh_warning()
+    
     # TO CHECK IF THE USER HAS LOGGED IN
     login_status_container = st.container()
     db, cursor = db_funcs.initialize_database()
@@ -213,7 +230,9 @@ if __name__ =="__main__":
             utils.initialize_variables()
             llm_setup()
 
-        message_count = utils.cached_get_message_count(st.session_state['user_info']['email'], datetime.timedelta(minutes=st.session_state['timeframe']))
+        
+
+        message_count = db_funcs.get_interaction_count(cursor, st.session_state['user_info']['email'], datetime.timedelta(minutes=st.session_state['timeframe']))
         with login_status_container:
             st.success(f"Welcome {st.session_state['user_info']['email']}. Setup is ready!")
 
@@ -221,6 +240,7 @@ if __name__ =="__main__":
             st.error("You've reached today's quota of 10 messages. Please come back after 24 hours.")
         else:
             initialise_side_bar_components()
+            
 
         # Chat display container
         chat_container = st.container()
@@ -254,7 +274,7 @@ if __name__ =="__main__":
                     st.session_state['messages'].append({"role":"user", "parts": [prompt]})
                     st.session_state['display_messages'].append({"role":"user", "parts": [prompt]})
                     db_funcs.save_chat_message(cursor, db, st.session_state['user_info']['email'], "user", prompt) 
-                    db_funcs.save_user(cursor, db, st.session_state['user_info']['email'], st.session_state['user_info']['name'], st.session_state['user_text']) 
+                    
 
                     
                     with chat_container:

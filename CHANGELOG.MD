@@ -4,8 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.4] - 2024-10-09
+Updates pushed in this commit.
+### Added
+- An alert if the user refreshes the screen. Best way to do would be if we can save session data. Too much work.
+### Changed
+- Message_count being retrieved from DB rather than cache. Works fine :)
+### Fixed
+- Saving rows properly in users and messages table.
+### Removed
+
 ## [1.0.3] - 2024-10-08
- 
 Updates pushed in this commit.
  
 ### Added
