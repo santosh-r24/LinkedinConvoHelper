@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [2.0.0] - 2024-10-22
+ 
+Updates pushed in this commit.
+### Added
+- pre-loading of user_pdf.
+- if the user asks irrelevant questions, the LLM spits on the user's face. 
+### Changed
+### Fixed
+### Removed
+
+
 ## [1.0.4] - 2024-10-09
 Updates pushed in this commit.
 ### Added

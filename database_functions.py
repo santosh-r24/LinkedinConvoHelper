@@ -11,7 +11,6 @@ def initialize_database():
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS linkedin_users (
         email TEXT PRIMARY KEY,
-        name TEXT,
         user_pdf TEXT
     )
     ''')
@@ -29,29 +28,26 @@ def initialize_database():
     connection.commit()
     return connection, cursor
 
-def save_user(cursor, connection, email: str, name: str, user_pdf:str):
-    cursor.execute('INSERT INTO users (email, name, user_pdf) VALUES (%s, %s, %s) ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, user_pdf = EXCLUDED.user_pdf', (email, name, user_pdf))
+def save_user_if_not_exists(cursor, connection, email: str, user_pdf: str):
+    cursor.execute('INSERT INTO linkedin_users (email, user_pdf) VALUES (%s, %s) ON CONFLICT (email) DO NOTHING', (email, user_pdf))
     connection.commit()
 
 def save_chat_message(cursor, connection, email: str, role: str, content: str):
     parts = json.dumps([content])
-    cursor.execute('INSERT INTO chat_messages (email, role, parts) VALUES (%s, %s, %s)', (email, role, parts))
+    cursor.execute('INSERT INTO linkedin_chat_messages (email, role, parts) VALUES (%s, %s, %s)', (email, role, parts))
     connection.commit()
 
 def get_interaction_count(cursor, email, timeframe):
-    """
-    cursor: cursor
-    email: email of user
-    timeframe: duration till which rate_limit will apply to cap messages.
-    
-    returns
-    message_count: integer value of how many messages have been sent by user in the past timeframe.
-    """
     current_time = datetime.datetime.now(datetime.timezone.utc)
     timeframe_start = current_time - timeframe
     cursor.execute(
-        "SELECT COUNT(*) FROM chat_messages WHERE email = %s AND timestamp >= %s AND role = 'user'",
+        "SELECT COUNT(*) FROM linkedin_chat_messages WHERE email = %s AND timestamp >= %s AND role = 'user'",
         (email, timeframe_start)
     )
     message_count = cursor.fetchone()[0]
     return message_count
+
+def get_user_pdf(cursor, email: str):
+    cursor.execute('SELECT user_pdf FROM linkedin_users WHERE email = %s', (email,))
+    result = cursor.fetchone()
+    return result[0] if result else None

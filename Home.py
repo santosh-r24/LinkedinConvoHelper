@@ -9,7 +9,7 @@ from google_auth_oauthlib.flow import Flow
 import datetime
 import psycopg2
 import streamlit.components.v1 as components
-
+import PyPDF2
 import utils
 import database_functions as db_funcs
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
@@ -74,6 +74,10 @@ def llm_setup():
         - Each question SHOULD establish a connection between the user's experiences and the guest's expertise, background, or professional journey.
         - The questions MUST show a clear understanding of both profiles, drawing from industry trends, shared experiences, and relevant skills.
         - Each question SHOULD encourage the guest to reflect, share insights, or provide advice.
+
+        ###VERY IMPORTANT INSTRUCTION###
+        - If the user asks something that is not relevant to the either the user's or the guest's profile. Kindly ask the question to ask something relevant. You are allowed to be sarcastic.
+        - Even if the user repeatedly asks something irrelevant, you are allowed to be rude and ask the user to ask something relevant. 
 
         ###Chain of Thoughts###
 
@@ -151,11 +155,12 @@ def parse_pdf(file):
 
 def get_llm_response():
     """Send the parsed text to the Gemini model and return generated questions."""
+    logger.debug("get_llm_response() called")  # Add this debug log
     model = st.session_state['model']
     messages = st.session_state['messages']
     user_text = st.session_state['user_text']
     guest_text = st.session_state['guest_text']
-    logger.debug(messages)
+    # logger.debug(messages)
     if not st.session_state['first_interaction']:
         final_prompt = messages
     else:
@@ -169,7 +174,7 @@ def get_llm_response():
             """
         st.session_state['first_interaction'] = False
         st.session_state['messages'].append({"role":"user", "parts": [f"User profile: {user_text}\n Guest Profile: {guest_text}"]})
-        logger.debug(final_prompt)
+        # logger.debug(final_prompt)
     response = model.generate_content(final_prompt)
     return response.text
 
@@ -177,13 +182,49 @@ def initialise_side_bar_components():
     """
     Contains components that are present in the side bar, apart from pages.
     """
+    
+    user_pdf_content = db_funcs.get_user_pdf(cursor, st.session_state['user_info']['email'])
+    if user_pdf_content:
+        returning_user = True
+        user_pdf_uploaded = True
+    else:
+        returning_user = False
+
+
+    if 'preload_pdf' not in st.session_state:
+        if returning_user:
+            st.session_state.preload_pdf = True
+        else:
+            st.session_state.preload_pdf = False
+
     with st.sidebar:
-        user_pdf = st.file_uploader("Upload your LinkedIn profile PDF here", type=".pdf")
-        guest_pdf = st.file_uploader("Upload guest's LinkedIn profile PDF here", type=".pdf")
+
+        if st.session_state.preload_pdf:
+            st.text("Your LinkedIn profile is loaded")
+            
+            # Button to re-upload PDF
+            if st.button("Re-upload profile", disabled=not st.session_state.preload_pdf):
+                st.session_state.preload_pdf = False
+                st.rerun()
+        
+        if not st.session_state.preload_pdf:
+            user_pdf = st.file_uploader("Upload your profile", type="pdf", key="main_pdf")
+            user_pdf_uploaded = True
+            # if user_pdf is not None:
+            #     user_pdf_content = parse_pdf(uploaded_file)
+
+        # New file uploader for guest PDF
+        guest_pdf = st.file_uploader("Upload Guest's profile", type="pdf", key="guest_pdf")
+        # if guest_pdf is not None:
+        #     guest_pdf_content = parse_pdf(guest_pdf)
+        
 
         if st.button("Submit", type="primary"):
-            if user_pdf and guest_pdf:
-                user_text = parse_pdf(user_pdf)
+            if user_pdf_uploaded and guest_pdf:
+                if not returning_user:    
+                    user_text = parse_pdf(user_pdf)
+                else:
+                    user_text = user_pdf_content
                 guest_text = parse_pdf(guest_pdf)
                 st.session_state['user_text'] = user_text
                 st.session_state['guest_text'] = guest_text
@@ -194,6 +235,7 @@ def initialise_side_bar_components():
                 st.error("Error: Please upload both your LinkedIn profile PDF and the guest's LinkedIn profile PDF.")
 
 def add_refresh_warning():
+
     refresh_warning_js = '''
     <script>
     window.addEventListener('beforeunload', function (e) {
@@ -225,6 +267,8 @@ if __name__ == "__main__":
         st.session_state['display_messages'] = []
         st.session_state['first_interaction'] = True
 
+    
+    
     if st.session_state['user_info']:
         if not st.session_state['variables_initialised']:
             utils.initialize_variables()
@@ -235,6 +279,7 @@ if __name__ == "__main__":
         message_count = db_funcs.get_interaction_count(cursor, st.session_state['user_info']['email'], datetime.timedelta(minutes=st.session_state['timeframe']))
         with login_status_container:
             st.success(f"Welcome {st.session_state['user_info']['email']}. Setup is ready!")
+            st.session_state['has_logged_in'] = True
 
         if message_count >= st.session_state['rate_limit']:
             st.error("You've reached today's quota of 10 messages. Please come back after 24 hours.")
@@ -246,8 +291,8 @@ if __name__ == "__main__":
         chat_container = st.container()
 
         # This block deals with the initial user and guest pdf being set
-        if st.session_state.get('pdfs_submitted', False):
-            st.session_state['pdfs_submitted'] = False  # Reset the flag
+        if st.session_state.get('pdfs_submitted', False) and not st.session_state.get('initial_response_generated', False):
+            logger.debug("Attempting to generate initial response")  # Add this debug log
             if st.session_state['user_text'] and st.session_state['guest_text']:
                 response = get_llm_response()
                 if response:
@@ -256,7 +301,9 @@ if __name__ == "__main__":
                     st.session_state['messages'].append({"role":"model", "parts": [response]})
                     st.session_state['display_messages'].append({"role":"model", "parts": [response]})
                     st.session_state['first_interaction'] = False
-                    logger.info(f"Messages after pdfs are initialised {st.session_state['messages']}")
+                    st.session_state['initial_response_generated'] = True
+                    # logger.info(f"Initial response generated and added to messages")
+                    st.rerun()  # Force a rerun to update the UI
 
         # Display existing messages
         with chat_container:
@@ -300,3 +347,4 @@ if __name__ == "__main__":
                 google_oauth()
     
     
+
