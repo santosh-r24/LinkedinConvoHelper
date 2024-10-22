@@ -200,21 +200,24 @@ def initialise_side_bar_components():
     with st.sidebar:
 
         if st.session_state.preload_pdf:
-            st.text("Your LinkedIn profile is loaded")
+            st.subheader("Your LinkedIn profile is loaded")
             
-            # Button to re-upload PDF
+            # Wrap the button in a container with dark blue background
+            
             if st.button("Re-upload profile", disabled=not st.session_state.preload_pdf):
                 st.session_state.preload_pdf = False
                 st.rerun()
         
         if not st.session_state.preload_pdf:
-            user_pdf = st.file_uploader("Upload your profile", type="pdf", key="main_pdf")
+            st.subheader("Upload your profile")
+            user_pdf = st.file_uploader("", type="pdf", key="main_pdf")
             user_pdf_uploaded = True
             # if user_pdf is not None:
             #     user_pdf_content = parse_pdf(uploaded_file)
 
         # New file uploader for guest PDF
-        guest_pdf = st.file_uploader("Upload Guest's profile", type="pdf", key="guest_pdf")
+        st.subheader("Upload guest's profile")
+        guest_pdf = st.file_uploader("", type="pdf", key="guest_pdf")
         # if guest_pdf is not None:
         #     guest_pdf_content = parse_pdf(guest_pdf)
         
@@ -233,6 +236,12 @@ def initialise_side_bar_components():
                 st.rerun()
             else:
                 st.error("Error: Please upload both your LinkedIn profile PDF and the guest's LinkedIn profile PDF.")
+
+        # Add this at the end of the sidebar
+        st.markdown("---")  # Horizontal line for visual separation
+        st.warning("""We save your LinkedIn profile just to load it faster the next time you visit.
+                   We don't use any of the data to train models; we can't afford to train new models.""", icon="⚠️")
+        
 
 def add_refresh_warning():
 
@@ -292,7 +301,6 @@ if __name__ == "__main__":
 
         # This block deals with the initial user and guest pdf being set
         if st.session_state.get('pdfs_submitted', False) and not st.session_state.get('initial_response_generated', False):
-            logger.debug("Attempting to generate initial response")  # Add this debug log
             if st.session_state['user_text'] and st.session_state['guest_text']:
                 response = get_llm_response()
                 if response:
@@ -302,7 +310,6 @@ if __name__ == "__main__":
                     st.session_state['display_messages'].append({"role":"model", "parts": [response]})
                     st.session_state['first_interaction'] = False
                     st.session_state['initial_response_generated'] = True
-                    # logger.info(f"Initial response generated and added to messages")
                     st.rerun()  # Force a rerun to update the UI
 
         # Display existing messages
@@ -311,18 +318,50 @@ if __name__ == "__main__":
                 with st.chat_message(message["role"]):
                     st.markdown(message["parts"][0])
 
+        # Add buttons after initial response
+        if st.session_state.get('initial_response_generated', False):
+            col1, col2, col3 = st.columns(3)
+            
+            def send_button_message(display_message, llm_prompt):
+                st.session_state['user_input'] = display_message
+                st.session_state['llm_prompt'] = llm_prompt
+                st.session_state['button_clicked'] = True
+
+            with col1:
+                if st.button("Linkedin Connection Note", key="btn1"):
+                    send_button_message(
+                        "Help me create a Linkedin connection note",
+                        "Help me create a linkedin connection note. The goal is to simply network. use the commonalities in our profiles to make the note catchy. Make it professional and actionable, Invite for a coffee or a virtual chat. Since it's linkedin make it within 300 characters."
+                    )
+            with col2:
+                if st.button("Informational Interview", key="btn2"):
+                    send_button_message("Help me setup an informational interview.", 
+                                        "Help me setup an informational interview. The goal is to get to know more about the person, the company and the role they are in. Use my profile and common experiences to ask specific questions. And ask for a virtual coffee chat. Just give me the message to send.")
+            with col3:
+                if st.button("Referral Request", key="btn3"):
+                    send_button_message("Help me get a referral for a role.", 
+                                        "Help me get a referral for a role.The goal is to be direct and ask a referral for the role. For now assume the role i'm asking for is <the_role>. Use my skills and the guest's common ground to make me a strong candidate. Express genuine interest in the company and the role. Show the guest that i've done my research. Be respectful. Be brief. Just give me the message to send.")
+
         # Handle new user input
         if st.session_state['user_text'] and st.session_state['guest_text'] and not st.session_state['first_interaction']:
-            if prompt := st.chat_input("Type your message here"):
+            user_input = st.chat_input("Type your message here", key="chat_input")
+            
+            if user_input or st.session_state.get('button_clicked', False):
+                if st.session_state.get('button_clicked', False):
+                    display_prompt = st.session_state['user_input']
+                    llm_prompt = st.session_state['llm_prompt']
+                    st.session_state['button_clicked'] = False
+                else:
+                    display_prompt = user_input
+                    llm_prompt = user_input
+
                 message_count = utils.cached_get_message_count(st.session_state['user_info']['email'], datetime.timedelta(minutes=st.session_state['timeframe']))
                 if message_count < st.session_state['rate_limit']:
                     with chat_container:
-                        st.chat_message("user").markdown(prompt)
-                    st.session_state['messages'].append({"role":"user", "parts": [prompt]})
-                    st.session_state['display_messages'].append({"role":"user", "parts": [prompt]})
-                    db_funcs.save_chat_message(cursor, db, st.session_state['user_info']['email'], "user", prompt) 
-                    
-
+                        st.chat_message("user").markdown(display_prompt)
+                    st.session_state['messages'].append({"role":"user", "parts": [llm_prompt]})
+                    st.session_state['display_messages'].append({"role":"user", "parts": [display_prompt]})
+                    db_funcs.save_chat_message(cursor, db, st.session_state['user_info']['email'], "user", display_prompt) 
                     
                     with chat_container:
                         with st.spinner("Generating response... please wait"):
@@ -347,4 +386,11 @@ if __name__ == "__main__":
                 google_oauth()
     
     
+
+
+
+
+
+
+
 
