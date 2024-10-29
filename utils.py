@@ -9,6 +9,14 @@ def initialize_variables():
     initializes streamlit variables used in the session state
     """
     _initialize_api_key()
+    st.session_state['model'] = None
+    st.session_state['user_text'] = None
+    st.session_state['guest_text'] = None
+    st.session_state['messages'] = []
+    st.session_state['display_messages'] = []
+    st.session_state['first_interaction'] = True
+    st.session_state['pdfs_submitted']= False
+    st.session_state['initial_response_generated']= False
     st.session_state['rate_limit'] = st.secrets['message_rate_limit']
     st.session_state['timeframe'] = st.secrets['timeframe_in_mins']
     st.session_state['variables_initialised'] = True

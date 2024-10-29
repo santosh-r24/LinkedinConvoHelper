@@ -1,1 +1,14 @@
-pypdf2
+google-generativeai==0.6.0
+google-ai-generativelanguage==0.6.4
+google-api-core==2.19.0
+protobuf==4.25.3
+pydantic==1.10.7
+tqdm==4.66.4
+typing-extensions==4.6.3
+google-api-python-client==2.132.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.0
+logzero==1.7.0
+psycopg2-binary==2.9.9
+streamlit
+cryptography==42.0.8
