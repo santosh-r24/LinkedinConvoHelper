@@ -7,9 +7,7 @@ import google.auth.transport.requests
 import google.oauth2.id_token
 from google_auth_oauthlib.flow import Flow
 import datetime
-import psycopg2
 import streamlit.components.v1 as components
-import PyPDF2
 import utils
 import database_functions as db_funcs
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
@@ -60,88 +58,10 @@ def credentials_to_dict(credentials):
 
 def llm_setup():
     """Setting up Gemini sources."""
-    # gemini_key = st.secrets['gemini_api_key']
     genai.configure(api_key=st.session_state['gemini_api_key'])
-    system_behavior = """
-        YOU ARE AN ELITE LINKEDIN NETWORKING AND CONVERSATION EXPERT WITH A DEEP UNDERSTANDING OF PROFESSIONAL BACKGROUNDS, 
-        INDUSTRY TRENDS, AND HUMAN INTERACTION. YOUR TASK IS TO ANALYZE TWO LINKEDIN PROFILES (ONE BELONGING TO THE USER, 
-        AND THE OTHER TO A GUEST) AND GENERATE RELEVANT, THOUGHT-PROVOKING QUESTIONS THAT THE USER CAN ASK THE GUEST, 
-        BASED ON THEIR OWN EXPERIENCES, TO SPARK A MEANINGFUL CONVERSATION.
-        REMEMBER THAT THE USER IS ASKING THE GUEST THE QUESTIONS, SO THE QUESTIONS SHOULD BE ASKED FROM THE USER'S PERSPECTIVE.
-        
-        ###INSTRUCTIONS###
-        - YOU MUST craft questions that are SPECIFIC, OPEN-ENDED, and THOUGHT-PROVOKING, promoting deeper discussions.
-        - Each question SHOULD establish a connection between the user's experiences and the guest's expertise, background, or professional journey.
-        - The questions MUST show a clear understanding of both profiles, drawing from industry trends, shared experiences, and relevant skills.
-        - Each question SHOULD encourage the guest to reflect, share insights, or provide advice.
-
-        ###VERY IMPORTANT INSTRUCTION###
-        - If the user asks something that is not relevant to the either the user's or the guest's profile. Kindly ask the question to ask something relevant. You are allowed to be sarcastic.
-        - Even if the user repeatedly asks something irrelevant, you are allowed to be rude and ask the user to ask something relevant. 
-
-        ###Chain of Thoughts###
-
-        FOLLOW these steps to generate relevant questions:
-
-        1. ANALYZE BOTH PROFILES:
-        1.1. REVIEW the user's profile thoroughly, examining key experiences, skills, achievements, and industries.
-        1.2. IDENTIFY themes or significant accomplishments in the guest's profile that align or contrast with the user's experiences.
-        1.3. UNDERSTAND the guest's unique expertise, roles, and career trajectory to tailor the questions effectively.
-
-        2. IDENTIFY COMMON GROUND OR CONTRASTS:
-        2.1. FIND areas where the user and guest share common industries, skills, or experiences.
-        2.2. IDENTIFY contrasts, such as differing industries or roles, where insightful comparisons can be made.
-        2.3. CONSIDER how the user's experience might relate to or differ from the guest's background in ways that foster engaging conversation.
-
-        3. FORMULATE THOUGHT-PROVOKING QUESTIONS:
-        3.1. CRAFT SPECIFIC questions that directly link the user’s experiences with the guest’s expertise.
-        3.2. DESIGN OPEN-ENDED questions that encourage the guest to elaborate on their insights, challenges, or successes.
-        3.3. GENERATE questions that promote REFLECTION, such as asking about lessons learned, decisions made, or industry trends.
-
-        4. ENCOURAGE ENGAGEMENT AND DEPTH:
-        4.1. ENSURE each question INVITES thoughtful responses, fostering mutual understanding and insight.
-        4.2. INCORPORATE references to industry trends, skills, or leadership strategies to encourage deeper reflection.
-        4.3. PROMPT the guest to share advice, predictions, or personal anecdotes related to the user's career path.
-
-        5. ASK ABOUT THE GUEST'S COMPANY
-        5.1 Use very minimal information about the company and try to ask questions from the public domain. 
-        5.2 ASk about the company's financials, growth, current and future projects. 
-        5.3 Use the public domain information ONLY for this purpose and not for any other purpose. 
-
-        ###What Not To Do###
-
-        AVOID these missteps:
-        - DO NOT ask generic or surface-level questions (e.g., "How is your job going?")
-        - NEVER create questions that lack a clear connection to the user's experiences or the guest's expertise.
-        - AVOID yes/no questions that do not encourage further discussion.
-        - NEVER ask questions that are overly technical unless there is a clear connection to the user's background.
-        - AVOID questions that could seem irrelevant or too personal to the guest's professional journey.
-        - NEVER respond to questions that aren't related to networking or conversations.
-        """
+    system_behavior = st.secrets['system_behavior']
     generation_config = genai.GenerationConfig(temperature=0.25)
     st.session_state['model'] = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system_behavior, generation_config=generation_config)
-
-# ###Below are example Q&A pairs. Use them only to understand the format of the answers. Do not use their content for answering new questions###
-#         Assume A is user, and B is Guest
-#         **A's Experience Summary**: 
-#         - Experienced in Product Management within the tech industry, focused on artificial intelligence.
-#         - A is currently studying engineering management at ABC University.
-#         - A has 2 years of experience in product management at a startup.
-
-#         **B's Experience Summary**: 
-#         - B is a diretor of product management at XYZ company. 
-#         - B has over 20 years of experience. 
-#         - He has been in one company for 20 years and he recently started a new role as a director of product management. 
-#         - He is a big proponent of the product-led growth and he is a big advocate of the same. 
-        
-
-#         **Generated Questions**:
-#         1. "first off, you’ve been in just 1 company all your life. And this is your 2nd company. That’s quite a commitment. Tell me your secret, because for us generation i can rarely find it and it’s impossible. "
-#         2. "I was doing some research and I saw that XYZ company declared a whopping profit of 200M just this quarter. And I see grid intelligence and smart meter being highlighted. can you talk more about that?"
-#         2. "I’m completely new to energy management space, but something about I believe is that I have to bring innovation into unconventional domains and that’s where the real success is. I’m an AI software product guy, have you thought incorporating AI into your platforms. There’s analytics, but what about AI. "
-#         3. "If my understanding is correct, XYZ company’s main customers are the government and big utility companies. But ultimately the end users are common people or the company’s employees, are there any end user facing applications that XYZ company is working on? Building for customers vs End users?"
-#         4. "What according to you is happiness and how do you define it?"
-#         5. "Finally, what is one thing that you would advise for someone who is looking out for a job in this tough market?"
 
 def parse_pdf(file):
     """Extracts text from uploaded PDF."""
@@ -155,7 +75,7 @@ def parse_pdf(file):
 
 def get_llm_response():
     """Send the parsed text to the Gemini model and return generated questions."""
-    logger.debug("get_llm_response() called")  # Add this debug log
+    # logger.debug("get_llm_response() called")  # Add this debug log
     model = st.session_state['model']
     messages = st.session_state['messages']
     user_text = st.session_state['user_text']
@@ -164,14 +84,7 @@ def get_llm_response():
     if not st.session_state['first_interaction']:
         final_prompt = messages
     else:
-        final_prompt = f"""User profile: {user_text}\n Guest Profile: {guest_text}\n\n Generate 6 thoughtful questions, 
-            - 2 personal question by find common ground. 
-            - 2 career related question: Ask questions about the guest's company. 
-            - 1 phiosophical open ended question about life.
-            - 1 career advice question.
-            Use simple english.
-            If the user asks about something that is not related to the guest's profile, kindly ask them to ask something relevant.
-            """
+        final_prompt = f"""User profile: {user_text}\n Guest Profile: {guest_text}\n\n{st.secrets['question_prompt']}"""
         st.session_state['first_interaction'] = False
         st.session_state['messages'].append({"role":"user", "parts": [f"User profile: {user_text}\n Guest Profile: {guest_text}"]})
         # logger.debug(final_prompt)
@@ -190,7 +103,6 @@ def initialise_side_bar_components():
     else:
         returning_user = False
 
-
     if 'preload_pdf' not in st.session_state:
         if returning_user:
             st.session_state.preload_pdf = True
@@ -198,29 +110,39 @@ def initialise_side_bar_components():
             st.session_state.preload_pdf = False
 
     with st.sidebar:
-
         if st.session_state.preload_pdf:
             st.subheader("Your LinkedIn profile is loaded")
             
             # Wrap the button in a container with dark blue background
             
-            if st.button("Re-upload profile", disabled=not st.session_state.preload_pdf):
+            if st.button("Re-upload user profile", disabled=not st.session_state.preload_pdf):
                 st.session_state.preload_pdf = False
+                st.session_state.first_interaction = True  # Ensure first_interaction is reset
+                st.session_state.pdfs_submitted = False
+                st.session_state['user_text'] = None  # Reset to ensure new conversation tips
+                st.session_state['messages'] = []
                 st.rerun()
         
         if not st.session_state.preload_pdf:
             st.subheader("Upload your profile")
-            user_pdf = st.file_uploader("", type="pdf", key="main_pdf")
+            user_pdf = st.file_uploader("Upload user profile", type="pdf", key="main_pdf", label_visibility="hidden")
             user_pdf_uploaded = True
-            # if user_pdf is not None:
-            #     user_pdf_content = parse_pdf(uploaded_file)
 
         # New file uploader for guest PDF
         st.subheader("Upload guest's profile")
-        guest_pdf = st.file_uploader("", type="pdf", key="guest_pdf")
-        # if guest_pdf is not None:
-        #     guest_pdf_content = parse_pdf(guest_pdf)
+        guest_pdf_disabled = st.session_state.get('guest_text') is not None
+        guest_pdf = st.file_uploader("Upload guest profile", type="pdf", key="guest_pdf", label_visibility="hidden",disabled=guest_pdf_disabled)
         
+        # Re-upload guest profile option
+        if st.session_state.get('guest_text', None):
+            if st.button("Re-upload guest profile"):
+                # Clear out the guest profile and reset interaction to allow new guest upload
+                st.session_state['guest_text'] = None
+                st.session_state['first_interaction'] = True
+                st.session_state['pdfs_submitted'] = False  # Reset state
+                st.session_state['initial_response_generated']= False
+                st.session_state['messages'] = []
+                st.rerun()
 
         if st.button("Submit", type="primary"):
             if user_pdf_uploaded and guest_pdf:
@@ -232,6 +154,7 @@ def initialise_side_bar_components():
                 st.session_state['user_text'] = user_text
                 st.session_state['guest_text'] = guest_text
                 st.session_state['pdfs_submitted'] = True
+                st.session_state['first_interaction'] = True  # Ensure the new interaction begins
                 db_funcs.save_user_if_not_exists(cursor, db, st.session_state['user_info']['email'], st.session_state.get('user_text', ''))
                 st.rerun()
             else:
@@ -239,12 +162,11 @@ def initialise_side_bar_components():
 
         # Add this at the end of the sidebar
         st.markdown("---")  # Horizontal line for visual separation
+        st.warning("""Messages aren't stored across sessions!""", icon="⚠️")
         st.warning("""We save your LinkedIn profile just to load it faster the next time you visit.
                    We don't use any of the data to train models; we can't afford to train new models.""", icon="⚠️")
         
-
 def add_refresh_warning():
-
     refresh_warning_js = '''
     <script>
     window.addEventListener('beforeunload', function (e) {
@@ -257,33 +179,20 @@ def add_refresh_warning():
 
 if __name__ == "__main__":
     st.set_page_config(page_title='Linkedin Convo Helper', page_icon=':speech_balloon:', initial_sidebar_state='expanded', layout='wide')
-    
+    login_status_container = st.container()
+    db, cursor = db_funcs.initialize_database()
     # Add the refresh warning
     add_refresh_warning()
     
-    # TO CHECK IF THE USER HAS LOGGED IN
-    login_status_container = st.container()
-    db, cursor = db_funcs.initialize_database()
-
     if 'user_info' not in st.session_state:
         st.session_state['credentials'] = None
         st.session_state['user_info'] = None
         st.session_state['variables_initialised'] = False
-        st.session_state['model'] = None
-        st.session_state['user_text'] = None
-        st.session_state['guest_text'] = None
-        st.session_state['messages'] = []
-        st.session_state['display_messages'] = []
-        st.session_state['first_interaction'] = True
-
-    
-    
+        
     if st.session_state['user_info']:
         if not st.session_state['variables_initialised']:
             utils.initialize_variables()
             llm_setup()
-
-        
 
         message_count = db_funcs.get_interaction_count(cursor, st.session_state['user_info']['email'], datetime.timedelta(minutes=st.session_state['timeframe']))
         with login_status_container:
@@ -295,12 +204,11 @@ if __name__ == "__main__":
         else:
             initialise_side_bar_components()
             
-
         # Chat display container
         chat_container = st.container()
 
         # This block deals with the initial user and guest pdf being set
-        if st.session_state.get('pdfs_submitted', False) and not st.session_state.get('initial_response_generated', False):
+        if st.session_state['pdfs_submitted'] and not st.session_state['initial_response_generated']:
             if st.session_state['user_text'] and st.session_state['guest_text']:
                 response = get_llm_response()
                 if response:

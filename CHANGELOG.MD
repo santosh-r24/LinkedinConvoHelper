@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [2.0.2] - 2024-10-28
+ 
+Updates pushed in this commit.
+### Added
+### Changed
+- Moved prompts to .toml file 
+- Initialised all varialbes in utils.initialize_variables function
+### Fixed
+- Warnings raised due to empty label of st.file_upload.
+### Removed
+
 ## [2.0.1] - 2024-10-22
  
 Updates pushed in this commit.
