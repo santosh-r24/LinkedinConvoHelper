@@ -12,3 +12,4 @@ logzero==1.7.0
 psycopg2-binary==2.9.9
 streamlit
 cryptography==42.0.8
+PyMuPDF
