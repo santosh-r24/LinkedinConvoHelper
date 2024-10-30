@@ -39,9 +39,12 @@ def google_oauth():
     logger.debug("Reached end of google_oauth")
 
 def process_auth_callback():
+    logger.debug("Reached process auth callback")
     if 'code' in st.query_params.keys():
+        logger.debug("Reached process auth callback - code ")
         code = st.query_params['code']
         try:
+            logger.debug("Reached process auth callback - code try block")
             flow.fetch_token(code=code)
             credentials = flow.credentials
             request = google.auth.transport.requests.Request()
