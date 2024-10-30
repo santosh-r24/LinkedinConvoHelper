@@ -182,7 +182,7 @@ if __name__ == "__main__":
     login_status_container = st.container()
     db, cursor = db_funcs.initialize_database()
     # Add the refresh warning
-    add_refresh_warning()
+    # add_refresh_warning()
     
     if 'user_info' not in st.session_state:
         st.session_state['credentials'] = None
