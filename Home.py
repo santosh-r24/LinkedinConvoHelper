@@ -297,6 +297,7 @@ if __name__ == "__main__":
             with login_status_container:
                 st.warning(body="You're not logged in, please login to use the assistant")
                 google_oauth()
+                logger.debug("Code to make user login")
     
     
 
