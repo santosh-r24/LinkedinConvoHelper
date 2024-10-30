@@ -30,12 +30,13 @@ flow = Flow.from_client_config(
 )
 
 def google_oauth():
+    logger.debug("Reached google_oauth")
     authorization_url, state = flow.authorization_url(prompt='consent')
     st.session_state['state'] = state
     
     with st.container():
         st.markdown(f'<a href="{authorization_url}" target="_self" class="button primary" style="background-color: #4285F4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 10px;">Login with Google</a>', unsafe_allow_html=True)
-
+    logger.debug("Reached end of google_oauth")
 
 def process_auth_callback():
     if 'code' in st.query_params.keys():
@@ -180,6 +181,7 @@ def add_refresh_warning():
 if __name__ == "__main__":
     st.set_page_config(page_title='Linkedin Convo Helper', page_icon=':speech_balloon:', initial_sidebar_state='expanded', layout='wide')
     login_status_container = st.container()
+    logger.debug("Reached main")
     db, cursor = db_funcs.initialize_database()
     # Add the refresh warning
     # add_refresh_warning()
