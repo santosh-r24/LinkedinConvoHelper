@@ -168,15 +168,16 @@ def initialise_side_bar_components():
 
         # Add this at the end of the sidebar
         st.markdown("---")  # Horizontal line for visual separation
-        st.warning("""Messages aren't stored across sessions!""", icon="⚠️")
-        st.warning("""We save your LinkedIn profile just to load it faster the next time you visit.
-                   We don't use any of the data to train models; we can't afford to train new models.""", icon="⚠️")
-
-        # Modify the Send Feedback button to open the link in a new tab
         st.markdown(
             '<a href="https://forms.gle/HtXZrCcCqUQRBWrF7" target="_blank" class="button">Send Feedback</a>',
             unsafe_allow_html=True
         )
+        st.warning("""Messages aren't stored across sessions!""", icon="⚠️")
+        st.warning("""We save your LinkedIn profile just to load it faster the next time you visit.
+                   We don't use any of the data to train models; we can't afford to train new models.""", icon="⚠️")
+
+        
+        
 
 def add_refresh_warning():
     refresh_warning_js = '''
