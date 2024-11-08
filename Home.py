@@ -131,13 +131,13 @@ def initialise_side_bar_components():
         
         if not st.session_state.preload_pdf:
             st.subheader("Upload your profile")
-            user_pdf = st.file_uploader("Upload user profile", type="pdf", key="main_pdf", label_visibility="hidden")
+            user_pdf = st.file_uploader("Upload user profile", type="pdf", key="main_pdf", label_visibility="hidden", help="Upload your profile here")
             user_pdf_uploaded = True
 
         # New file uploader for guest PDF
         st.subheader("Upload guest's profile")
         guest_pdf_disabled = st.session_state.get('guest_text') is not None
-        guest_pdf = st.file_uploader("Upload guest profile", type="pdf", key="guest_pdf", label_visibility="hidden",disabled=guest_pdf_disabled)
+        guest_pdf = st.file_uploader("Upload guest profile", type="pdf", key="guest_pdf", label_visibility="hidden",disabled=guest_pdf_disabled, help="Upload target profile here")
         
         # Re-upload guest profile option
         if st.session_state.get('guest_text', None):
@@ -150,7 +150,7 @@ def initialise_side_bar_components():
                 st.session_state['messages'] = []
                 st.rerun()
 
-        if st.button("Submit", type="primary"):
+        if st.button("Generate Questions", type="primary"):
             if user_pdf_uploaded and guest_pdf:
                 if not returning_user:    
                     user_text = parse_pdf(user_pdf)
@@ -172,12 +172,9 @@ def initialise_side_bar_components():
             '<a href="https://forms.gle/HtXZrCcCqUQRBWrF7" target="_blank" class="button">Send Feedback</a>',
             unsafe_allow_html=True
         )
-        st.warning("""Messages aren't stored across sessions!""", icon="⚠️")
+        st.warning("""Messages will be discarded if logged out""", icon="⚠️")
         st.warning("""We save your LinkedIn profile just to load it faster the next time you visit.
                    We don't use any of the data to train models; we can't afford to train new models.""", icon="⚠️")
-
-        
-        
 
 def add_refresh_warning():
     refresh_warning_js = '''
@@ -192,11 +189,12 @@ def add_refresh_warning():
 
 if __name__ == "__main__":
     st.set_page_config(page_title='Linkedin Convo Helper', page_icon=':speech_balloon:', initial_sidebar_state='expanded', layout='wide')
+
     login_status_container = st.container()
-    logger.debug("Reached main")
+    # logger.debug("Reached main")
     db, cursor = db_funcs.initialize_database()
     # Add the refresh warning
-    # add_refresh_warning()
+    add_refresh_warning()
     
     if 'user_info' not in st.session_state:
         st.session_state['credentials'] = None
@@ -266,7 +264,7 @@ if __name__ == "__main__":
 
         # Handle new user input
         if st.session_state['user_text'] and st.session_state['guest_text'] and not st.session_state['first_interaction']:
-            user_input = st.chat_input("Type your message here", key="chat_input")
+            user_input = st.chat_input("Ask followup questions", key="chat_input")
             
             if user_input or st.session_state.get('button_clicked', False):
                 if st.session_state.get('button_clicked', False):
@@ -294,7 +292,7 @@ if __name__ == "__main__":
                     st.session_state['display_messages'].append({"role":"model", "parts": [response]})
                     db_funcs.save_chat_message(cursor, db, st.session_state['user_info']['email'], "model", response)
                 else:
-                    st.error("You've reached today's quota of 10 messages. Please come back after 24 hours.")
+                    st.error(f"You've reached today's quota of {st.secrets['message_rate_limit']} messages. Please come back after 24 hours.")
 
         logger.debug(f"User {st.session_state['user_info']['email']} reached {message_count} messages")
     else:
@@ -307,6 +305,7 @@ if __name__ == "__main__":
                 st.warning(body="You're not logged in, please login to use the assistant")
                 google_oauth()
                 logger.debug("Code to make user login")
+                utils.initial_display_elements()
     
     
 

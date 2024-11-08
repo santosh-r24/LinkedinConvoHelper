@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [2.0.3] - 2024-11-08
+ 
+Updates pushed in this commit.
+### Added
+- Landing page instructing users on what this is about, this only appears if users are logged out
+### Changed
+- The debug message which says if users exceed rate limits, instead of hardcoding the ratelimit
+- Default message in chatinput is changed
+- Changed the button name from submit to Generate Questions
+- Added helper tooltip on what each st.file_upload is meant for
+### Fixed
+### Removed
+
 ## [2.0.2] - 2024-10-28
  
 Updates pushed in this commit.
