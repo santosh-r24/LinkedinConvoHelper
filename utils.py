@@ -53,7 +53,7 @@ def initial_display_elements():
         </style>
         """, unsafe_allow_html=True)
     
-    st.header(""Network like a pro!", divider='rainbow')
+    st.header("Network like a pro!", divider='rainbow')
     st.write("Generate insightful conversation starters by analyzing LinkedIn profiles")
 
     st.markdown("""
