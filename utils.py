@@ -61,7 +61,6 @@ def initial_display_elements():
         ### How It Works
         1. **Login with Google**
         2. **Download LinkedIn Profiles**: Export your LinkedIn profile as a PDF, along with your conversation partner's profile.
-        3. It's crucial you download the PDF from Linkedin's save profile as PDF button. 
         3. **Upload Profiles Here**: Upload both PDFs below and hit submit.
         4. Voila!
         """)
