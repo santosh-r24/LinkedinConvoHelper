@@ -70,3 +70,4 @@ def initial_display_elements():
         st.markdown("### Downloading Linkedin Profiles")
         st.image("assets/linkedin.png",  width=500)  # Replace with your image path
         st.write("You can download Linkedin profile as a PDF by heading to the profile -> More -> Save to PDF")
+    
