@@ -54,13 +54,19 @@ def initial_display_elements():
         """, unsafe_allow_html=True)
     
     st.header("Network like a pro!", divider='rainbow')
-    st.write("Generate insightful conversation starters by analyzing LinkedIn profiles")
 
-    st.markdown("""
-    ### How It Works
-    1. **Login with Google**
-    2. **Download LinkedIn Profiles**: Export your LinkedIn profile as a PDF, along with your conversation partner's profile.
-    3. It's crucial you download the PDF from Linkedin's save profile as PDF button. 
-    3. **Upload Profiles Here**: Upload both PDFs below and hit submit.
-    4. Voila!
-    """)
+    col1, col2 = st.columns(2)
+    with col2:
+        st.markdown("""
+        ### How It Works
+        1. **Login with Google**
+        2. **Download LinkedIn Profiles**: Export your LinkedIn profile as a PDF, along with your conversation partner's profile.
+        3. It's crucial you download the PDF from Linkedin's save profile as PDF button. 
+        3. **Upload Profiles Here**: Upload both PDFs below and hit submit.
+        4. Voila!
+        """)
+
+    with col1:
+        st.markdown("### Downloading Linkedin Profiles")
+        st.image("assets/linkedin.png",  width=500)  # Replace with your image path
+        st.write("You can download Linkedin profile as a PDF by heading to the profile -> More -> Save to PDF")
