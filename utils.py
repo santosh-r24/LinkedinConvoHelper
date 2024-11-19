@@ -69,4 +69,7 @@ def initial_display_elements():
         st.markdown("### Downloading Linkedin Profiles")
         st.image("assets/linkedin.png",  width=500)  # Replace with your image path
         st.write("You can download Linkedin profile as a PDF by heading to the profile -> More -> Save to PDF")
+
+    st.warning("""We recognize that downloading and uploading PDFs adds an extra step, but currently, we are unable to afford API costs. 
+               We apologize for any inconvenience this may cause. If there is sufficient interest, we will definitely consider upgrading in the future.""", icon="⚠️")
     
