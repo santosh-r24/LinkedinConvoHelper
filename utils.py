@@ -61,6 +61,7 @@ def initial_display_elements():
         ### How It Works
         1. **Login with Google**
         2. **Download LinkedIn Profiles**: Export your LinkedIn profile as a PDF, along with your conversation partner's profile.
+        3. It's crucial you download the PDF from Linkedin's save profile as PDF button. 
         3. **Upload Profiles Here**: Upload both PDFs below and hit submit.
         4. Voila!
         """)
@@ -69,7 +70,6 @@ def initial_display_elements():
         st.markdown("### Downloading Linkedin Profiles")
         st.image("assets/linkedin.png",  width=500)  # Replace with your image path
         st.write("You can download Linkedin profile as a PDF by heading to the profile -> More -> Save to PDF")
-
+    
     st.warning("""We recognize that downloading and uploading PDFs adds an extra step, but currently, we are unable to afford API costs. 
                We apologize for any inconvenience this may cause. If there is sufficient interest, we will definitely consider upgrading in the future.""", icon="⚠️")
-    
