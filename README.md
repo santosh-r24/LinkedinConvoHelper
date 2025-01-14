@@ -12,5 +12,4 @@ Check it out here: https://linkedinconversationassistant.streamlit.app/
 ## Step 3: That's it! You get a bunch of questions you can ask the other person. Interact with the agent to generate more as well.
 ![landingpage](assets/questions.png)
 
-Try it out and send your feedback.
-![here](https://forms.gle/HtXZrCcCqUQRBWrF7)
+Try it out and send your feedback. https://forms.gle/HtXZrCcCqUQRBWrF7
